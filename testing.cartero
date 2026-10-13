@@ -1,3 +1,6 @@
 version = 1
-url = ""
+url = "{{API_URL}}/health"
 method = "GET"
+
+[variables]
+localhost = "http://localhost:8000"
