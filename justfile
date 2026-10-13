@@ -1,6 +1,5 @@
-run:
-    @go run .
+run: 
+    @./bin/api/main
 
 build:
-    @echo "building application..."
-    @go build -o bin/olx-api .
+    @go build -o bin/api/main ./cmd/api/main.go
