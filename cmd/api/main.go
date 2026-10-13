@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"time"
 )
 
 func main() {
@@ -14,8 +15,16 @@ func main() {
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
+	serverConfig := http.Server{
+		Addr:         ":8000",
+		Handler:      mux,
+		ReadTimeout:  time.Second * 10,
+		WriteTimeout: time.Second * 30,
+		IdleTimeout:  time.Second * 60,
+	}
+
 	log.Println("Server is running at PORT 8000")
-	err := http.ListenAndServe(":8000", mux)
+	err := serverConfig.ListenAndServe()
 	if err != nil {
 		log.Fatalf("ERR: %v", err)
 	}
