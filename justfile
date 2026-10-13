@@ -1,4 +1,4 @@
-run: 
+run: build
     @./bin/api/main
 
 build:
