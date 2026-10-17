@@ -6,11 +6,16 @@ import (
 	"time"
 
 	"github.com/yashG0/olx-api/internal/config"
+	"github.com/yashG0/olx-api/internal/db"
 	"github.com/yashG0/olx-api/internal/handlers"
 )
 
 func main() {
 	cfg := config.MustLoad()
+	_, err := db.Connect(cfg.DBUrl)
+	if err != nil {
+		log.Fatalf("main.db.connect: %v", err)
+	}
 	mux := http.NewServeMux()
 
 	// adding routes
@@ -26,7 +31,7 @@ func main() {
 	}
 
 	log.Println("Server is running at PORT", cfg.Port)
-	err := serverConfig.ListenAndServe()
+	err = serverConfig.ListenAndServe()
 	if err != nil {
 		log.Fatalf("ERR: %v", err)
 	}
