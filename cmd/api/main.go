@@ -6,18 +6,17 @@ import (
 	"time"
 
 	"github.com/yashG0/olx-api/internal/config"
+	"github.com/yashG0/olx-api/internal/handlers"
 )
 
 func main() {
 	cfg := config.MustLoad()
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"ok"}`))
-	})
+	// adding routes
+	mux.HandleFunc("GET /health", handlers.Health)
 
+	// creating configuration setup
 	serverConfig := http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      mux,
