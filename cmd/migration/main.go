@@ -7,7 +7,6 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	_ "github.com/golang-migrate/migrate/v4/source/github"
 	"github.com/yashG0/olx-api/internal/config"
 )
 
@@ -27,12 +26,12 @@ func main() {
 
 	switch os.Args[1] {
 	case "up":
-		err := m.Up()
+		err := m.Steps(1)
 		if err != nil {
 			log.Fatalf("migration.up: %v", err)
 		}
 	case "down":
-		err := m.Down()
+		err := m.Steps(-1)
 		if err != nil {
 			log.Fatalf("migration.down: %v", err)
 		}
