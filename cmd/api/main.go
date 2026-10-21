@@ -11,15 +11,21 @@ import (
 )
 
 func main() {
+	// loading main configuration or direct program exit
 	cfg := config.MustLoad()
-	_, err := db.Connect(cfg.DBUrl)
+
+	// we handle database connection if connect ok else we get error
+	db, err := db.Connect(cfg.DBUrl)
 	if err != nil {
 		log.Fatalf("main.db.connect: %v", err)
 	}
+
+	// we have created new Router/Mux
 	mux := http.NewServeMux()
 
-	// adding routes
+	// adding new Route in new mux
 	mux.HandleFunc("GET /health", handlers.Health)
+	mux.HandleFunc("GET /listing", handlers.Listing(db))
 
 	// creating configuration setup
 	serverConfig := http.Server{
@@ -31,6 +37,8 @@ func main() {
 	}
 
 	log.Println("Server is running at PORT", cfg.Port)
+
+	// Listeing our Router from serverconfig
 	err = serverConfig.ListenAndServe()
 	if err != nil {
 		log.Fatalf("ERR: %v", err)
