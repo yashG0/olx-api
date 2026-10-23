@@ -25,7 +25,8 @@ func main() {
 
 	// adding new Route in new mux
 	mux.HandleFunc("GET /health", handlers.Health)
-	mux.HandleFunc("GET /listing", handlers.Listing(db))
+	mux.HandleFunc("GET /listing", handlers.GetListing(db))
+	mux.HandleFunc("DELETE /listing/{id}", handlers.DeleteListing(db))
 
 	// creating configuration setup
 	serverConfig := http.Server{

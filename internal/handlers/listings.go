@@ -19,7 +19,7 @@ type listing struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-func Listing(db *sql.DB) http.HandlerFunc {
+func GetListing(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const (
 			defaultLimit = 20
@@ -83,5 +83,18 @@ func Listing(db *sql.DB) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(listings)
+	}
+}
+
+func DeleteListing(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		_, err := db.Exec("DELETE FROM listings WHERE id=$1", id)
+		if err != nil {
+			log.Printf("delete: %v", err)
+			http.Error(w, "database error", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
