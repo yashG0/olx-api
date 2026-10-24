@@ -27,6 +27,7 @@ func main() {
 	lh := handlers.NewListingHandler(db)
 	mux.HandleFunc("GET /health", handlers.Health)
 	mux.HandleFunc("GET /listing", lh.Get)
+	mux.HandleFunc("GET /listing/{id}", lh.GetById)
 	mux.HandleFunc("DELETE /listing/{id}", lh.Delete)
 
 	// creating configuration setup
