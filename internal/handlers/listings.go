@@ -3,18 +3,19 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
 )
 
 type ListingHandler struct {
-	db *sql.DB
+	db     *sql.DB
+	logger *slog.Logger
 }
 
-func NewListingHandler(db *sql.DB) *ListingHandler {
-	return &ListingHandler{db: db}
+func NewListingHandler(db *sql.DB, logger *slog.Logger) *ListingHandler {
+	return &ListingHandler{db: db, logger: logger}
 }
 
 type listing struct {
@@ -56,7 +57,7 @@ func (lh ListingHandler) Get(w http.ResponseWriter, r *http.Request) {
 		LIMIT $1
 	`, limit)
 	if err != nil {
-		log.Printf("query.listings: %v", err)
+		lh.logger.Info("Failed to fetched Result!", "Error", err)
 		http.Error(w, "database error", http.StatusInternalServerError)
 		return
 	}
@@ -66,7 +67,7 @@ func (lh ListingHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	for rows.Next() {
 		var l listing
-		if err := rows.Scan(
+		err := rows.Scan(
 			&l.ID,
 			&l.Title,
 			&l.Description,
@@ -74,8 +75,9 @@ func (lh ListingHandler) Get(w http.ResponseWriter, r *http.Request) {
 			&l.City,
 			&l.CreatedAt,
 			&l.UpdatedAt,
-		); err != nil {
-			log.Printf("rows.scan: %v", err)
+		)
+		if err != nil {
+			lh.logger.Error("Failed to parse Result!", "Error", err)
 			http.Error(w, "database error", http.StatusInternalServerError)
 			return
 		}
@@ -83,23 +85,25 @@ func (lh ListingHandler) Get(w http.ResponseWriter, r *http.Request) {
 		listings = append(listings, l)
 	}
 
-	if err := rows.Err(); err != nil {
-		log.Printf("rows.err: %v", err)
-		http.Error(w, "database error", http.StatusInternalServerError)
+	err = rows.Err()
+	if err != nil {
+		lh.logger.Error("Failed to parse each Result", "Error", err)
+		http.Error(w, "Internal Error!", http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(listings)
 }
 
 func (lh ListingHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := r.PathValue("id")
-	_, err := lh.db.ExecContext(ctx, "DELETE FROM listings WHERE id=$1", id)
+	_, err := lh.db.ExecContext(ctx, "DELETE FROM listing WHERE id=$1", id)
 	if err != nil {
-		log.Printf("delete: %v", err)
-		http.Error(w, "database error", http.StatusInternalServerError)
+		lh.logger.Error("failed to delete record in listing!", "listing_id", id, "error", err)
+		http.Error(w, "failed to delete record in listing!", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -120,43 +124,10 @@ func (lh ListingHandler) GetById(w http.ResponseWriter, r *http.Request) {
 		&data.UpdatedAt,
 	)
 	if err != nil {
-		log.Printf("listing.getid: %v", err)
+		lh.logger.Error("Failed to parse data!", "Error", err, "Id", id)
 		http.Error(w, "Failed to parser data!", http.StatusOK)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(data)
-}
-
-func (lh ListingHandler) Update(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	id := r.PathValue("id")
-	var data listing
-	err := json.NewDecoder(r.Body).Decode(&data)
-	if err != nil {
-		log.Printf("listing.update.decode: %v", err)
-		http.Error(w, "invalid JSON body", http.StatusBadRequest)
-		return
-	}
-
-	res, err := lh.db.ExecContext(ctx, `UPDATE listings SET title = $1, description = $2, price = $3, city = $4, updated_at = NOW()
-		WHERE id = $5
-	`, data.Title, data.Description, data.Price, data.City, id)
-
-	if err != nil {
-		log.Printf("listing.update: %v", err)
-		http.Error(w, "database error", http.StatusInternalServerError)
-		return
-	}
-	affected, err := res.RowsAffected()
-	if err != nil {
-		log.Printf("listing.update.rows_affected: %v", err)
-		http.Error(w, "database error", http.StatusInternalServerError)
-		return
-	}
-	if affected == 0 {
-		http.Error(w, "listing not found", http.StatusNotFound)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
 }

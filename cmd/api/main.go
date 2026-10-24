@@ -2,7 +2,9 @@ package main
 
 import (
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/yashG0/olx-api/internal/config"
@@ -20,11 +22,19 @@ func main() {
 		log.Fatalf("main.db.connect: %v", err)
 	}
 
+	// Configure structured logger here
+	logHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		AddSource: true,
+		Level:     slog.LevelInfo,
+	})
+	// Register Handler into New slog instance
+	logger := slog.New(logHandler)
+
 	// we have created new Router/Mux
 	mux := http.NewServeMux()
 
 	// adding new Route in new mux
-	lh := handlers.NewListingHandler(db)
+	lh := handlers.NewListingHandler(db, logger)
 	mux.HandleFunc("GET /health", handlers.Health)
 	mux.HandleFunc("GET /listing", lh.Get)
 	mux.HandleFunc("GET /listing/{id}", lh.GetById)
