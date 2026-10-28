@@ -3,12 +3,12 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/yashG0/olx-api/internal/httpx"
 	"github.com/yashG0/olx-api/internal/middleware"
 )
 
@@ -46,9 +46,10 @@ func (lh ListingHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if val := r.URL.Query().Get("limit"); val != "" {
 		n, err := strconv.Atoi(val)
 		if err != nil || n < 1 {
-			http.Error(
+			httpx.Error(
 				w,
 				"limit must be a positive integer",
+				httpx.CodeValidationFailed,
 				http.StatusBadRequest,
 			)
 			return
@@ -66,7 +67,7 @@ func (lh ListingHandler) Get(w http.ResponseWriter, r *http.Request) {
 	`, limit)
 	if err != nil {
 		lh.logger.Info("Failed to fetched Result!", "Error", err)
-		http.Error(w, "database error", http.StatusInternalServerError)
+		httpx.Error(w, "database error", httpx.CodeInternalError, http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
@@ -98,8 +99,8 @@ func (lh ListingHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// checking the error may arise while scanning the each rows
 	err = rows.Err()
 	if err != nil {
-		lh.logger.Error("Failed to scan rows!", "Error", err)
-		http.Error(w, "Internal Error!", http.StatusInternalServerError)
+		lh.logger.Error("listing.get.parse: Failed to scan rows!", "Error", err)
+		httpx.Error(w, "Failed to parse row!", httpx.CodeInternalError, http.StatusInternalServerError)
 		return
 	}
 
@@ -125,50 +126,10 @@ func (lh ListingHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	// if failed to delete the listing arise the error
 	if err != nil {
 		lh.logger.Error("failed to delete record in listing!", "listing_id", id, "error", err, "request-id", requestID)
-		http.Error(w, "failed to delete record in listing!", http.StatusInternalServerError)
+		httpx.Error(w, "failed to delete record in listing!", httpx.CodeInternalError, http.StatusInternalServerError)
 		return
 	}
 
 	// make a header to Response to
 	w.WriteHeader(http.StatusNoContent)
-}
-
-func (lh ListingHandler) GetById(w http.ResponseWriter, r *http.Request) {
-	// create a request context using r
-	ctx := r.Context()
-
-	// getting the path value from path parameter
-	id := r.PathValue("id")
-
-	// create a query to get the listing by Id
-	res := lh.db.QueryRowContext(ctx,
-		"SELECT id, title, description, price, city, created_at, updated_at FROM listings WHERE id = $1",
-		id)
-
-	// scan the output listing result to data in-memory variable
-	var data listing
-	err := res.Scan(
-		&data.ID,
-		&data.Title,
-		&data.Description,
-		&data.Price,
-		&data.City,
-		&data.CreatedAt,
-		&data.UpdatedAt,
-	)
-
-	// if failed to scan the result into variable
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			w.Write([]byte("No listing found!"))
-			return
-		}
-		lh.logger.Error("Failed to parse data!", "Error", err, "Id", id)
-		http.Error(w, "Failed to parser data!", http.StatusInternalServerError)
-		return
-	}
-
-	// make a response header and body
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(data)
 }
