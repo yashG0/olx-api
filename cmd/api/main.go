@@ -10,6 +10,7 @@ import (
 	"github.com/yashG0/olx-api/internal/config"
 	"github.com/yashG0/olx-api/internal/db"
 	"github.com/yashG0/olx-api/internal/handlers"
+	"github.com/yashG0/olx-api/internal/middleware"
 )
 
 func main() {
@@ -40,10 +41,13 @@ func main() {
 	mux.HandleFunc("GET /listing/{id}", lh.GetById)
 	mux.HandleFunc("DELETE /listing/{id}", lh.Delete)
 
+	// wiring the middleware with main route
+	handler := middleware.RequestId(mux)
+
 	// creating configuration setup
 	serverConfig := http.Server{
 		Addr:         ":" + cfg.Port,
-		Handler:      mux,
+		Handler:      handler,
 		ReadTimeout:  time.Second * 10,
 		WriteTimeout: time.Second * 30,
 		IdleTimeout:  time.Second * 60,

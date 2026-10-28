@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/yashG0/olx-api/internal/utils"
+	"github.com/yashG0/olx-api/internal/middleware"
 )
 
 type ListingHandler struct {
@@ -40,13 +40,6 @@ func (lh ListingHandler) Get(w http.ResponseWriter, r *http.Request) {
 		defaultLimit = 20
 		maxLimit     = 100
 	)
-
-	// checking custom User id
-	reqId := r.Header.Get("X-Request-Id")
-	// if userid is Nil then create a custom user id
-	if reqId == "" {
-		reqId = utils.GetRequestId()
-	}
 
 	// configure the limit parameter gracefully handling it
 	limit := defaultLimit
@@ -121,6 +114,7 @@ func (lh ListingHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (lh ListingHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	// again, create a request context of user we will pass while DB query
 	ctx := r.Context()
+	requestID := middleware.RequestIDFromContext(ctx)
 
 	// getting the path parameter
 	id := r.PathValue("id")
@@ -130,7 +124,7 @@ func (lh ListingHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	// if failed to delete the listing arise the error
 	if err != nil {
-		lh.logger.Error("failed to delete record in listing!", "listing_id", id, "error", err)
+		lh.logger.Error("failed to delete record in listing!", "listing_id", id, "error", err, "request-id", requestID)
 		http.Error(w, "failed to delete record in listing!", http.StatusInternalServerError)
 		return
 	}
