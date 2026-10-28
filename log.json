@@ -1,0 +1,11 @@
+{
+  "time": "2026-10-25T10:49:48.490525284+05:30",
+  "level": "INFO",
+  "source": {
+    "function": "github.com/yashG0/olx-api/internal/handlers.ListingHandler.Get",
+    "file": "/home/yash/Desktop/coding/learn-go/olx-api/internal/handlers/listings.go",
+    "line": 94
+  },
+  "msg": "listing fetched",
+  "total": 6
+}
