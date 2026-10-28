@@ -38,7 +38,6 @@ func main() {
 	lh := handlers.NewListingHandler(db, logger)
 	mux.HandleFunc("GET /health", handlers.Health)
 	mux.HandleFunc("GET /listing", lh.Get)
-	mux.HandleFunc("GET /listing/{id}", lh.GetById)
 	mux.HandleFunc("DELETE /listing/{id}", lh.Delete)
 
 	// wiring the middleware with main route
