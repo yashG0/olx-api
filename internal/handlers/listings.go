@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -135,33 +136,55 @@ func (lh ListingHandler) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (lh ListingHandler) Create(w http.ResponseWriter, r *http.Request) {
+	// creating request context
 	ctx := r.Context()
+
+	// setting the Request id into request context and getting it back
 	reqId := middleware.RequestIDFromContext(ctx)
 	defer r.Body.Close()
 
-	var l CreatelistingRequest
-	err := json.NewDecoder(r.Body).Decode(&l)
+	// Decoding the User request body data int reqData variable
+	var reqData CreatelistingRequest
+	err := json.NewDecoder(r.Body).Decode(&reqData)
+
+	// if failed to decode or parse raise error
 	if err != nil {
 		lh.logger.Error("Failed to decode!", "request-id", reqId)
 		httpx.Error(w, err.Error(), httpx.CodeMalformedJson, http.StatusBadRequest)
 		return
 	}
 
+	// here we perform request body data validation and raise error if failed
+	err = reqData.validateRequestData()
+	if err != nil {
+		// creating a new variable verr to open the error interface into it
+		var verr *ValidationError
+
+		errors.As(err, &verr)
+		httpx.ValidationError(w, err.Error(), httpx.CodeValidationFailed, http.StatusUnprocessableEntity, verr.Field)
+		return
+	}
+
+	// query to create the new listing and return it
 	row := lh.db.QueryRowContext(
 		ctx,
 		"INSERT INTO listings (title,description,price,city) VALUES ($1,$2,$3,$4) RETURNING id,title,description,created_at",
-		l.Title, l.Description, l.Price, l.City,
+		reqData.Title, reqData.Description, reqData.Price, reqData.City,
 	)
-	var out CreateListingResponse
 
+	// creating new variable out to parse the json object into it
+	var out CreateListingResponse
 	err = row.Scan(&out.ID, &out.Title, &out.Description, &out.CreatedAt)
+
+	// if failed to parse output data into out raise the error
 	if err != nil {
 		lh.logger.Error("listing.create.scan: Failed to insert!", "request_id", reqId)
 		httpx.Error(w, err.Error(), httpx.CodeInternalError, http.StatusInternalServerError)
 		return
 	}
-	lh.logger.Info("listing.created.success: New listing Created", "request-id", reqId, "listing-id", out.ID)
 
+	// finally perform the output operation
+	lh.logger.Info("listing.created.success: New listing Created", "request-id", reqId, "listing-id", out.ID)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(out)
