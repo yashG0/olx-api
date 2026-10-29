@@ -133,3 +133,35 @@ func (lh ListingHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	// make a header to Response to
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (lh ListingHandler) Create(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	reqId := middleware.RequestIDFromContext(ctx)
+	defer r.Body.Close()
+
+	var l listing
+	err := json.NewDecoder(r.Body).Decode(&l)
+	if err != nil {
+		lh.logger.Error("Failed to decode!", "request-id", reqId)
+		httpx.Error(w, err.Error(), httpx.CodeMalformedJson, http.StatusBadRequest)
+		return
+	}
+
+	row := lh.db.QueryRowContext(
+		ctx,
+		"INSERT INTO listings (title,description,price,city) VALUES ($1,$2,$3,$4) RETURNING id",
+		l.Title, l.Description, l.Price, l.City,
+	)
+	var id string
+	err = row.Scan(&id)
+	if err != nil {
+		lh.logger.Error("listing.create.scan: Failed to insert!", "request_id", reqId)
+		httpx.Error(w, err.Error(), httpx.CodeInternalError, http.StatusInternalServerError)
+		return
+	}
+	lh.logger.Info("listing.created.success: New listing Created", "request-id", reqId, "listing-id", id)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(map[string]string{"id": id})
+}

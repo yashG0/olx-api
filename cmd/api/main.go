@@ -14,36 +14,37 @@ import (
 )
 
 func main() {
-	// loading main configuration or direct program exit
+	// loading main configuration or direct program exit -
 	cfg := config.MustLoad()
 
-	// we handle database connection if connect ok else we get error
+	// we handle database connection if connect then ok otherwise we will get error -
 	db, err := db.Connect(cfg.DBUrl)
 	if err != nil {
 		log.Fatalf("main.db.connect: %v", err)
 	}
 
-	// Configure structured logger here
+	// Configure structured logger here -
 	logHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		AddSource: true,
 		Level:     slog.LevelInfo,
 	})
-	// Register Handler into New slog instance
+	// Register Handler into New slog instance -
 	logger := slog.New(logHandler)
 
-	// we have created new Router/Mux
+	// we have created new Router/Mux -
 	mux := http.NewServeMux()
 
-	// adding new Route in new mux
+	// adding new Route in new mux -
 	lh := handlers.NewListingHandler(db, logger)
 	mux.HandleFunc("GET /health", handlers.Health)
 	mux.HandleFunc("GET /listing", lh.Get)
 	mux.HandleFunc("DELETE /listing/{id}", lh.Delete)
+	mux.HandleFunc("POST /listing", lh.Create)
 
-	// wiring the middleware with main route
+	// wiring the middleware with main route -
 	handler := middleware.RequestId(mux)
 
-	// creating configuration setup
+	// creating configuration setup -
 	serverConfig := http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      handler,
@@ -54,7 +55,7 @@ func main() {
 
 	log.Println("Server is running at PORT", cfg.Port)
 
-	// Listeing our Router from serverconfig
+	// Listeing our Router from serverconfig -
 	err = serverConfig.ListenAndServe()
 	if err != nil {
 		log.Fatalf("ERR: %v", err)
