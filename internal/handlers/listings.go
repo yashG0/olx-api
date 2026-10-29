@@ -31,6 +31,13 @@ type listing struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
+type listingCreate struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Price       int64  `json:"price"`
+	City        string `json:"city"`
+}
+
 func (lh ListingHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// create a request context for User Request
 	ctx := r.Context()
@@ -139,7 +146,7 @@ func (lh ListingHandler) Create(w http.ResponseWriter, r *http.Request) {
 	reqId := middleware.RequestIDFromContext(ctx)
 	defer r.Body.Close()
 
-	var l listing
+	var l listingCreate
 	err := json.NewDecoder(r.Body).Decode(&l)
 	if err != nil {
 		lh.logger.Error("Failed to decode!", "request-id", reqId)
