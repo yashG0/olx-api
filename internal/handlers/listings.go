@@ -31,13 +31,6 @@ type listing struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-type listingCreate struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Price       int64  `json:"price"`
-	City        string `json:"city"`
-}
-
 func (lh ListingHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// create a request context for User Request
 	ctx := r.Context()
@@ -146,7 +139,7 @@ func (lh ListingHandler) Create(w http.ResponseWriter, r *http.Request) {
 	reqId := middleware.RequestIDFromContext(ctx)
 	defer r.Body.Close()
 
-	var l listingCreate
+	var l CreatelistingRequest
 	err := json.NewDecoder(r.Body).Decode(&l)
 	if err != nil {
 		lh.logger.Error("Failed to decode!", "request-id", reqId)
@@ -156,19 +149,20 @@ func (lh ListingHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	row := lh.db.QueryRowContext(
 		ctx,
-		"INSERT INTO listings (title,description,price,city) VALUES ($1,$2,$3,$4) RETURNING id",
+		"INSERT INTO listings (title,description,price,city) VALUES ($1,$2,$3,$4) RETURNING id,title,description,created_at",
 		l.Title, l.Description, l.Price, l.City,
 	)
-	var id string
-	err = row.Scan(&id)
+	var out CreateListingResponse
+
+	err = row.Scan(&out.ID, &out.Title, &out.Description, &out.CreatedAt)
 	if err != nil {
 		lh.logger.Error("listing.create.scan: Failed to insert!", "request_id", reqId)
 		httpx.Error(w, err.Error(), httpx.CodeInternalError, http.StatusInternalServerError)
 		return
 	}
-	lh.logger.Info("listing.created.success: New listing Created", "request-id", reqId, "listing-id", id)
+	lh.logger.Info("listing.created.success: New listing Created", "request-id", reqId, "listing-id", out.ID)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(map[string]string{"id": id})
+	_ = json.NewEncoder(w).Encode(out)
 }
