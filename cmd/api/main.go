@@ -23,12 +23,23 @@ func main() {
 		log.Fatalf("main.db.connect: %v", err)
 	}
 
-	// Configure structured logger here -
-	logHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+	// Open log file.
+	logFile, err := os.OpenFile(
+		"logger/data.log",
+		os.O_CREATE|os.O_WRONLY|os.O_APPEND,
+		0644,
+	)
+	if err != nil {
+		log.Fatalf("main.logger.open: %v", err)
+	}
+	defer logFile.Close()
+
+	// Configure structured logger (file only).
+	logHandler := slog.NewJSONHandler(logFile, &slog.HandlerOptions{
 		AddSource: true,
 		Level:     slog.LevelInfo,
 	})
-	// Register Handler into New slog instance -
+
 	logger := slog.New(logHandler)
 
 	// we have created new Router/Mux -

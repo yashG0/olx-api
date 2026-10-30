@@ -1,10 +1,8 @@
-start-db:
-    @podman start postgres-db
-
 build:
     @go build -o bin/api/main ./cmd/api/main.go
 
-run: build start-db
+run: build
+    @podman start postgres-db
     @./bin/api/main
 
 build_migrate:

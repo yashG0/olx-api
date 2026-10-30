@@ -13,15 +13,18 @@ type CreatelistingRequest struct {
 	City        string `json:"city"`
 }
 
+// we have created validation error struct
 type ValidationError struct {
 	Field   string
 	Message string
 }
 
+// we have implement Error interface here for ValidationError endpoint
 func (e *ValidationError) Error() string {
 	return fmt.Sprintf("%s: %s", e.Field, e.Message)
 }
 
+// the main logic behind user request data validation
 func (req CreatelistingRequest) validateRequestData() error {
 	if strings.TrimSpace(req.Title) == "" {
 		return &ValidationError{Field: "title", Message: "must not be empty!"}
